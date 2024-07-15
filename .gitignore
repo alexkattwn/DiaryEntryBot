@@ -1,0 +1,41 @@
+# Системные файлы
+.DS_Store
+Thumbs.db
+
+# Файлы сборки и артефакты
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Каталоги для сборки и бинарные файлы
+/bin/
+/out/
+/build/
+
+# Зависимости Go (если не используется Go modules)
+vendor/
+
+# Файлы зависимости, создаваемые командой `go mod`
+go.sum
+
+# Каталог для данных тестов
+/testdata/
+
+# Среды разработки
+.idea/
+.vscode/
+*~
+\#*\#
+*.sublime-project
+*.sublime-workspace
+
+# Файлы конфигурации и настройки
+.env
+
+# Docker файлы
+/docker-compose.yml
+/Dockerfile
