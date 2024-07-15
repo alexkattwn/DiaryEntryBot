@@ -4,31 +4,44 @@ package bot
 
 import (
 	"DiaryEntryBot/internal/services"
+	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
+var (
+	notificationTimer *time.Timer
+)
+
 // handleMessage обрабатывает входящие сообщения
 func handleMessage(update tgbotapi.Update, bot *tgbotapi.BotAPI, service *services.DiaryService) {
+	if update.Message.IsCommand() {
+		switch update.Message.Command() {
+		case "start":
+			handleStartCommand(update, bot)
+			return
+		case "view":
+			viewEntries(update, bot, service)
+			return
+		case "edit": 
+			editEntry(update, bot, service)
+			return
+		case "delete":
+			deleteEntry(update, bot, service)
+			return
+		}
+	}
+
 	userID := update.Message.From.ID
 	content := update.Message.Text
 
-	// Команды для работы с дневником
-	if strings.HasPrefix(content, "/view") {
-		viewEntries(update, bot, service)
-		return
-	} else if strings.HasPrefix(content, "/edit") {
-		editEntry(update, bot, service)
-		return
-	} else if strings.HasPrefix(content, "/delete") {
-		deleteEntry(update, bot, service)
-		return
-	}
-
 	// Создание новой записи в дневнике
 	service.CreateEntry(userID, content)
+
+	resetTimer(update.Message.Chat.ID, bot)
 
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Запись добавлена в дневник!")
 	bot.Send(msg)
@@ -47,9 +60,7 @@ func viewEntries(update tgbotapi.Update, bot *tgbotapi.BotAPI, service *services
 
 	var response string
 	for _, entry := range entries {
-		response += "ID: " + strconv.Itoa(int(entry.ID)) + "\n"
-		response += entry.CreatedAt.Format("2006-01-02 15:04:05") + "\n"
-		response += entry.Content + "\n\n"
+		response += fmt.Sprintf("ID: %d\nДата: %s\n%s\n\n", entry.ID, entry.CreatedAt.Format("02.01.2006 15:04"), entry.Content)
 	}
 
 	if response == "" {
@@ -117,4 +128,34 @@ func deleteEntry(update tgbotapi.Update, bot *tgbotapi.BotAPI, service *services
 
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Запись удалена!")
 	bot.Send(msg)
+}
+
+// handleStartCommand обрабатывает команду /start
+func handleStartCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI) {
+	welcomeMessage := "Привет! 😊 Я твой личный дневник-бот. Ты можешь отправить мне сообщение, и я сохраню его в твой дневник. " +
+		"Ты также можешь использовать следующие команды:\n" +
+		"/view - Просмотреть все записи\n" +
+		"/edit <ID> <новый текст> - Редактировать запись\n" +
+		"/delete <ID> - Удалить запись"
+
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, welcomeMessage)
+	bot.Send(msg)
+}
+
+// sendNotification отправляет уведомление, если нет новых записей в течение 24 часов
+func sendNotification(chatID int64, bot *tgbotapi.BotAPI) {
+	msg := tgbotapi.NewMessage(chatID, "Давно не было новых записей! 📔")
+	bot.Send(msg)
+
+	resetTimer(chatID, bot)
+}
+
+func resetTimer(chatID int64, bot *tgbotapi.BotAPI) {
+	if notificationTimer != nil {
+		notificationTimer.Stop()
+	}
+
+	notificationTimer = time.AfterFunc(24 * time.Hour, func() {
+		sendNotification(chatID, bot)
+	})
 }

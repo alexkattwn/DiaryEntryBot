@@ -16,7 +16,7 @@ func StartBot(config *config.Config, db repository.Database) {
 	// Создает нового бота, используя API-токен
 	bot, err := tgbotapi.NewBotAPI(config.TelegramBotToken)
 	if err != nil {
-		log.Panic(err)
+		log.Panic(err, "Не удалось создать бота")
 	}
 
 	log.Println("Бот запущен")
@@ -27,7 +27,10 @@ func StartBot(config *config.Config, db repository.Database) {
 	u.Timeout = 60
 
 	// Создает канал для получения обновлений от Telegram
-	updates, _ := bot.GetUpdatesChan(u)
+	updates, err := bot.GetUpdatesChan(u)
+	if err != nil {
+		log.Panic(err, "Не удалось создать канал для получения обновлений от telegram")
+	}
 
 	service := services.NewDiaryService(db, config.EncryptionKey)
 

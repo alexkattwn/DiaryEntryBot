@@ -16,7 +16,7 @@ func main() {
 	// загрузка переменных окружения
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Fatal("Ошибка загрузки переменных окружения из файла .env")
 	}
 
 	// Настройка конфигурации
